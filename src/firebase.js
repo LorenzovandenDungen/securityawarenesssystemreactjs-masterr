@@ -28,6 +28,7 @@ import {
 } from "firebase/firestore";
 import { getDatabase, ref, set } from "firebase/database";
 
+
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_AUTH_DOMAIN,
