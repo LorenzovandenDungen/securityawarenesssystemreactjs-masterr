@@ -1,8 +1,6 @@
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/database";
-import "firebase/compat/functions";
-import "firebase/storage";
 import { initializeApp } from "firebase/app";
 import {
   GoogleAuthProvider,
@@ -28,6 +26,7 @@ import {
   where,
 } from "firebase/firestore";
 import { getDatabase, ref, set } from "firebase/database";
+import { getFunctions } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
@@ -45,8 +44,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const database = getDatabase(app);
-const functions = firebase.functions(app);
+const functions = getFunctions(app);
 const googleProvider = new GoogleAuthProvider();
+
 
 // Admin
 
