@@ -1,7 +1,8 @@
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/database";
-import 'firebase/storage';
+import "firebase/compat/functions";
+import "firebase/storage";
 import { initializeApp } from "firebase/app";
 import {
   GoogleAuthProvider,
@@ -28,7 +29,6 @@ import {
 } from "firebase/firestore";
 import { getDatabase, ref, set } from "firebase/database";
 
-
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_AUTH_DOMAIN,
@@ -37,7 +37,7 @@ const firebaseConfig = {
   storageBucket: process.env.REACT_APP_STORAGE_BUCKET,
   messagingSenderId: process.env.REACT_APP_MESSAGING_SENDER_ID,
   appId: process.env.REACT_APP_APP_ID,
-  measurementId: process.env.REACT_APP_MEASUREMENT_ID
+  measurementId: process.env.REACT_APP_MEASUREMENT_ID,
 };
 
 const app = initializeApp(firebaseConfig);
@@ -45,8 +45,8 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const database = getDatabase(app);
+const functions = firebase.functions(app);
 const googleProvider = new GoogleAuthProvider();
-
 
 // Admin
 
