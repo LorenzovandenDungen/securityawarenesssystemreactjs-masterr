@@ -283,3 +283,4 @@ export {
   getTrainingById,
 };
 
+export default firebase;
