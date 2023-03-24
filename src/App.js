@@ -14,10 +14,10 @@ function App() {
       <Router>
         <Routes>
           <Route exact path="/" element={<Login />} />
-          <Route exact path="/Employee" element={<Employee auth={auth} />} />
-          <Route exact path="/Admin" element={<AdminLoginPage />} />
-          <Route exact path="/Admindashboard" element={<AdminDashboard />} />
-          <Route exact path="/Company" element={<CompanyLoginPage />} />
+          <Route exact path="/employee" element={<Employee auth={auth} />} />
+          <Route exact path="/admin" element={<AdminLoginPage />} />
+          <Route exact path="/admindashboard" element={<AdminDashboard />} />
+          <Route exact path="/company" element={<CompanyLoginPage />} />
         </Routes>
       </Router>
     </div>
