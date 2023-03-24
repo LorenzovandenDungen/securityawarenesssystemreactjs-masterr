@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import * as Papa from 'papaparse';
 
 const AdminDashboard = () => {
@@ -96,18 +95,19 @@ const AdminDashboard = () => {
       <button onClick={handleLogout}>Logout</button>
       <h2>Users</h2>
       <div>
-<label htmlFor="file">Upload CSV file:</label>
-<input type="file" id="file" onChange={handleFileUpload} />
-</div>
-<h3>Add User</h3>
-<form onSubmit={handleUserSubmit}>
-<div>
-<label htmlFor="name">Name:</label>
-<input type="text" id="name" value={userName} onChange={e => setUserName(e.target.value)} />
-</div>
-<div>
-<label htmlFor="email">Email:</label>
-<input type="email" id="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} />
+        <label htmlFor="file">Upload CSV file:</label>
+        <input type="file" id="file" onChange={handleFileUpload} />
+      </div>
+      <h3>Add User</h3>
+      <form onSubmit={handleUserSubmit}>
+        <div>
+          <label htmlFor="name">Name:</label>
+          <input type="text" id="name" value={userName} onChange={e => setUserName(e.target.value)} />
+        </div>
+        <div>
+          <label htmlFor="email">Email:</label>
+          <input type="email" id="email" value={userEmail} onChange={e => setUserEmail(e.target.value)
+} />
 </div>
 <div>
 <label htmlFor="role">Role:</label>
@@ -118,14 +118,13 @@ const AdminDashboard = () => {
 </div>
 <button type="submit">Add User</button>
 </form>
-<h3>User List</h3>
 <table>
 <thead>
 <tr>
 <th>Name</th>
 <th>Email</th>
 <th>Role</th>
-<th>Invite</th>
+<th>Action</th>
 </tr>
 </thead>
 <tbody>
@@ -153,9 +152,9 @@ setSelectedUsers(selectedUsers.filter(selectedUser => selectedUser.id !== user.i
 </tbody>
 </table>
 <div>
-<label htmlFor="inviteDuration">Invite duration (in days):</label>
-<input type="number" id="inviteDuration" value={inviteDuration} onChange={e => setInviteDuration(parseInt(e.target.value))} />
-<button onClick={handleInvite}>Send Invite</button>
+<label htmlFor="duration">Invite valid for:</label>
+<input type="number" id="duration" value={inviteDuration} onChange={e => setInviteDuration(e.target.value)} />
+<button onClick={handleInvite}>Invite Selected Users</button>
 </div>
 </div>
 );
