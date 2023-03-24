@@ -1,6 +1,7 @@
 import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/database";
+import 'firebase/storage';
 import { initializeApp } from "firebase/app";
 import {
   GoogleAuthProvider,
@@ -44,6 +45,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const database = getDatabase(app);
 const googleProvider = new GoogleAuthProvider();
+
 
 // Admin
 

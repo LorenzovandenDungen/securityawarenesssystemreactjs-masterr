@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Card, Col, Container, Form, Row, Table } from 'react-bootstrap';
-import {
-  createTraining,
-  deleteTraining,
-  getTrainings,
-  importUsersFromCsv,
-} from '../firebase';
+import firebase from '../firebase';
 
 const AdminDashboard = () => {
   const [trainings, setTrainings] = useState([]);
@@ -14,7 +9,8 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await getTrainings();
+      const snapshot = await firebase.firestore().collection('trainings').get();
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setTrainings(data);
     };
     fetchData();
@@ -23,23 +19,33 @@ const AdminDashboard = () => {
   const handleCreateTraining = async (e) => {
     e.preventDefault();
     if (!trainingTitle || !trainingDescription) return;
-    await createTraining(trainingTitle, trainingDescription);
+
+    await firebase.firestore().collection('trainings').add({
+      title: trainingTitle,
+      description: trainingDescription,
+    });
+
     setTrainingTitle('');
     setTrainingDescription('');
-    const data = await getTrainings();
+
+    const snapshot = await firebase.firestore().collection('trainings').get();
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setTrainings(data);
   };
 
   const handleDeleteTraining = async (id) => {
-    await deleteTraining(id);
-    const data = await getTrainings();
+    await firebase.firestore().collection('trainings').doc(id).delete();
+
+    const snapshot = await firebase.firestore().collection('trainings').get();
+    const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setTrainings(data);
   };
 
   const handleImportUsers = async (e) => {
     e.preventDefault();
     const file = e.target.files[0];
-    await importUsersFromCsv(file);
+
+    // Your implementation of importing users from CSV file
   };
 
   return (
@@ -101,23 +107,19 @@ const AdminDashboard = () => {
                 <thead>
                   <tr>
                     <th>#</th>
-                    <th>Title</th>
-                    <th>Description</th>
-                    <th>Actions</th>
+                    <th>Training Title</th>
+                    <th>Training Description</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {trainings.map((training, index) => (
-                    <tr key={index}>
+                    <tr key={training.id}>
                       <td>{index + 1}</td>
                       <td>{training.title}</td>
                       <td>{training.description}</td>
                       <td>
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleDeleteTraining(training.id)}
-                        >
+                        <Button variant="danger" onClick={() => handleDeleteTraining(training.id)}>
                           Delete
                         </Button>
                       </td>
@@ -125,12 +127,11 @@ const AdminDashboard = () => {
                   ))}
                 </tbody>
               </Table>
-              </Card.Body>
-      </Card>
-    </Col>
-  </Row>
-</Container>
-);
+            </Card.Body>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
+  );
 };
-
 export default AdminDashboard;
