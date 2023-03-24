@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { auth, firestore } from '../firebase';
+import { auth } from '../firebase';
+import { db } from '../firebase';
 import * as Papa from 'papaparse';
 
 const AdminDashboard = () => {
@@ -10,6 +11,7 @@ const AdminDashboard = () => {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [inviteDuration, setInviteDuration] = useState(7);
   const navigate = useNavigate();
+  const currentUser = auth.currentUser;
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(user => {
@@ -21,7 +23,7 @@ const AdminDashboard = () => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = firestore.collection('users').onSnapshot(snapshot => {
+    const unsubscribe = db.collection('users').onSnapshot(snapshot => {
       const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setUsers(users);
     });
@@ -47,14 +49,14 @@ const AdminDashboard = () => {
           email: row[1],
           role: row[2],
         }));
-        firestore.collection('users').add({ users });
+        db.collection('users').add({ users });
       },
     });
   };
 
   const handleInvite = () => {
     selectedUsers.forEach(user => {
-      firestore.collection('invites').add({
+      db.collection('invites').add({
         userId: user.id,
         trainingId: 'some-training-id',
         validUntil: new Date(Date.now() + inviteDuration * 86400000), // invite valid for inviteDuration days
@@ -64,8 +66,24 @@ const AdminDashboard = () => {
   };
 
   const handleRoleChange = (userId, role) => {
-    firestore.collection('users').doc(userId).update({ role });
+    db.collection('users').doc(userId).update({ role });
   };
+
+  const handleUserSubmit = e => {
+    e.preventDefault();
+    db.collection('users').add({
+      name: userName,
+      email: userEmail,
+      role: userRole,
+    });
+    setUserName('');
+    setUserEmail('');
+    setUserRole('admin');
+  };
+
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userRole, setUserRole] = useState('admin');
 
   if (loading) {
     return <h1>Loading...</h1>;
@@ -77,66 +95,70 @@ const AdminDashboard = () => {
       <p>Welcome {user.email}</p>
       <button onClick={handleLogout}>Logout</button>
       <h2>Users</h2>
-      <p>Add user:</p>
-      <form onSubmit={handleUserSubmit}>
-        <label>
-          Name:
-          <input type="text" value={userName} onChange={e => setUserName(e.target.value)} />
-        </label>
-        <label>
-          Email:
-          <input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} />
-        </label>
-        <label>
-          Role:
-          <select value={userRole} onChange={e => setUserRole(e.target.value)}>
-            <option value="admin">Admin</option>
-            <option value="employee">Employee</option>
-            <option value="company">Company</option>
-          </select>
-        </label>
-        <button type="submit">Add user</button>
-      </form>
-      <p>Upload users from CSV:</p>
-      <input type="file" accept=".csv" onChange={handleFileUpload} />
-      <ul>
-        {users.map(user => (
-          <li key={user.id}>
-<input
-type="checkbox"
-onChange={() =>
-setSelectedUsers(selectedUsers.includes(user) ? selectedUsers.filter(u => u !== user) : [...selectedUsers, user])
-}
-/>
-{user.name} ({user.email}) - {user.role}
-{user.id !== currentUser.id && (
+      <div>
+<label htmlFor="file">Upload CSV file:</label>
+<input type="file" id="file" onChange={handleFileUpload} />
+</div>
+<h3>Add User</h3>
+<form onSubmit={handleUserSubmit}>
+<div>
+<label htmlFor="name">Name:</label>
+<input type="text" id="name" value={userName} onChange={e => setUserName(e.target.value)} />
+</div>
+<div>
+<label htmlFor="email">Email:</label>
+<input type="email" id="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} />
+</div>
+<div>
+<label htmlFor="role">Role:</label>
+<select id="role" value={userRole} onChange={e => setUserRole(e.target.value)}>
+<option value="admin">Admin</option>
+<option value="user">User</option>
+</select>
+</div>
+<button type="submit">Add User</button>
+</form>
+<h3>User List</h3>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Email</th>
+<th>Role</th>
+<th>Invite</th>
+</tr>
+</thead>
+<tbody>
+{users.map(user => (
+<tr key={user.id}>
+<td>{user.name}</td>
+<td>{user.email}</td>
+<td>
 <select value={user.role} onChange={e => handleRoleChange(user.id, e.target.value)}>
 <option value="admin">Admin</option>
-<option value="employee">Employee</option>
-<option value="company">Company</option>
+<option value="user">User</option>
 </select>
-)}
-
-</li>
+</td>
+<td>
+<input type="checkbox" onChange={e => {
+if (e.target.checked) {
+setSelectedUsers([...selectedUsers, user]);
+} else {
+setSelectedUsers(selectedUsers.filter(selectedUser => selectedUser.id !== user.id));
+}
+}} />
+</td>
+</tr>
 ))}
-</ul>
-<h2>Invitations</h2>
-<p>Invite selected users to training:</p>
-<label>
-  Valid for (days):
-  <input
-    type="number"
-    min="1"
-    max="30"
-    value={inviteDuration}
-    onChange={e => setInviteDuration(e.target.value)}
-  />
-</label>
-<button onClick={handleInvite} disabled={selectedUsers.length === 0}>
-  Invite
-</button>
-<Link to="/">Go back</Link>
+</tbody>
+</table>
+<div>
+<label htmlFor="inviteDuration">Invite duration (in days):</label>
+<input type="number" id="inviteDuration" value={inviteDuration} onChange={e => setInviteDuration(parseInt(e.target.value))} />
+<button onClick={handleInvite}>Send Invite</button>
+</div>
 </div>
 );
 };
+
 export default AdminDashboard;
