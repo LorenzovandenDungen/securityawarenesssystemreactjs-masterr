@@ -1,171 +1,219 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebase';
-import * as Papa from 'papaparse';
+import React, { useState, useEffect } from "react";
+import {
+  getUsers,
+  createUser,
+  updateUserRole,
+  sendTrainingInvite,
+  getTrainings,
+  importUsersFromCsv,
+} from "../firebase";
 
 const AdminDashboard = () => {
-  const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState(null);
   const [users, setUsers] = useState([]);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserRole, setNewUserRole] = useState("Employee");
   const [selectedUsers, setSelectedUsers] = useState([]);
-  const [inviteDuration, setInviteDuration] = useState(7);
-  const navigate = useNavigate();
-  const currentUser = auth.currentUser;
+  const [trainingOptions, setTrainingOptions] = useState([]);
+  const [selectedTraining, setSelectedTraining] = useState("");
+  const [inviteExpiryTime, setInviteExpiryTime] = useState("");
+  const [csvFile, setCsvFile] = useState(null);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(user => {
-      setUser(user);
-      setLoading(false);
-    });
-
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = db.collection('users').onSnapshot(snapshot => {
-      const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setUsers(users);
-    });
-
-    return unsubscribe;
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      await auth.signOut();
-      navigate('/login');
-    } catch (error) {
-      console.log(error);
+    async function fetchUsers() {
+      const fetchedUsers = await getUsers();
+      setUsers(fetchedUsers);
     }
-  };
 
-  const handleFileUpload = e => {
-    setSelectedUsers([]);
-    const file = e.target.files[0];
-    Papa.parse(file, {
-      complete: results => {
-        const users = results.data.slice(1).map(row => ({
-          name: row[0],
-          email: row[1],
-          role: row[2],
-        }));
-        db.collection('users').add({ users });
-      },
-    });
-  };
-
-  const handleInvite = () => {
-    selectedUsers.forEach(user => {
-      db.collection('invites').add({
-        userId: user.id.id,
-        trainingId: 'some-training-id',
-        validUntil: new Date(Date.now() + inviteDuration * 86400000), // invite valid for inviteDuration days
+    async function fetchTrainings() {
+      const fetchedTrainings = await getTrainings();
+      const trainingOptions = fetchedTrainings.map((training) => {
+        return { label: training.title, value: training.id };
       });
-      // TODO: Send email invite to user
+      setTrainingOptions(trainingOptions);
+    }
+
+    fetchUsers();
+    fetchTrainings();
+  }, []);
+
+  const handleCreateUser = async () => {
+    await createUser(newUserName, newUserEmail, newUserRole);
+    setNewUserName("");
+    setNewUserEmail("");
+    setNewUserRole("Employee");
+    const fetchedUsers = await getUsers();
+    setUsers(fetchedUsers);
+  };
+
+  const handleUserRoleChange = async (user, newRole) => {
+    await updateUserRole(user.id, newRole);
+    const updatedUsers = users.map((u) => {
+      if (u.id === user.id) {
+        u.role = newRole;
+      }
+      return u;
     });
+    setUsers(updatedUsers);
   };
 
-  const handleRoleChange = (userId, role) => {
-    db.collection('users').doc(userId).update({ role });
+  const handleSendTrainingInvite = async () => {
+    await Promise.all(
+      selectedUsers.map((user) =>
+        sendTrainingInvite(selectedTraining, user.email, inviteExpiryTime)
+      )
+    );
+    setSelectedUsers([]);
+    setSelectedTraining("");
+    setInviteExpiryTime("");
   };
 
-  const handleUserSubmit = e => {
-    e.preventDefault();
-    db.collection('users').add({
-      name: userName,
-      email: userEmail,
-      role: userRole,
-    });
-    setUserName('');
-    setUserEmail('');
-    setUserRole('admin');
+  const handleFileInputChange = (e) => {
+    const file = e.target.files[0];
+    setCsvFile(file);
   };
 
-  const [userName, setUserName] = useState('');
-  const [userEmail, setUserEmail] = useState('');
-  const [userRole, setUserRole] = useState('admin');
+  const handleImportUsersFromCsv = async () => {
+    if (!csvFile) {
+      return;
+    }
+    await importUsersFromCsv(csvFile);
+    setCsvFile(null);
+    const fetchedUsers = await getUsers();
+    setUsers(fetchedUsers);
+  };
 
-  if (loading) {
-    return <h1>Loading...</h1>;
-  }
+  const handleSendTrainingInviteSelected = async () => {
+    await Promise.all(
+      selectedUsers.map((user) =>
+        sendTrainingInvite(selectedTraining, user.email, inviteExpiryTime)
+      )
+    );
+    setSelectedUsers([]);
+    setSelectedTraining("");
+    setInviteExpiryTime("");
+  };
 
   return (
     <div>
       <h1>Admin Dashboard</h1>
-      <button onClick={handleLogout}>Logout</button>
-      <h2>Users</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map(user => (
-            <tr key={user.id}>
-              <td>{user.name}</td>
-              <td>{user.email}</td>
-              <td>
-                <select
-                  value={user.role}
-                  onChange={e => handleRoleChange(user.id, e.target.value)}
-                >
-                  <option value="admin">Admin</option>
-                  <option value="user">User</option>
-                </select>
-              </td>
-              <td>
-                <button onClick={() => setSelectedUsers([...selectedUsers, user])}>
-                  Invite
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {selectedUsers.length > 0 && (
-        <div>
-          <h2>Invite Users</h2>
-          <p>Invite valid for {inviteDuration} days</p>
-          <button onClick={handleInvite}>Send Invites</button>
-        </div>
-      )}
-      <h2>Add User</h2>
-      <form onSubmit={handleUserSubmit}>
+      <div>
+        <h2>Create User</h2>
         <label>
           Name:
           <input
             type="text"
-            value={userName}
-            onChange={e => setUserName(e.target.value)}
+            value={newUserName}
+            onChange={(e) => setNewUserName(e.target.value)}
           />
         </label>
-        <br />
         <label>
           Email:
           <input
             type="email"
-            value={userEmail}
-            onChange={e => setUserEmail(e.target.value)}
+            value={newUserEmail}
+            onChange={(e) => setNewUserEmail(e.target.value)}
           />
         </label>
-        <br />
         <label>
           Role:
-          <select value={userRole} onChange={e => setUserRole(e.target.value)}>
-            <option value="admin">Admin</option>
-            <option value="user">User</option>
+          <select
+            value={newUserRole}
+            onChange={(e) => setNewUserRole(e.target.value)}
+            >
+            <option value="Employee">Employee</option>
+            <option value="Manager">Manager</option>
+            <option value="Admin">Admin</option>
           </select>
         </label>
-        <br />
-        <button type="submit">Add User</button>
-      </form>
-      <h2>Upload Users</h2>
-      <input type="file" onChange={handleFileUpload} />
+        <button onClick={handleCreateUser}>Create User</button>
+      </div>
+      <div>
+        <h2>Manage Users</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.id}>
+                <td>{user.name}</td>
+                <td>{user.email}</td>
+                <td>
+                  <select
+                    value={user.role}
+                    onChange={(e) => handleUserRoleChange(user, e.target.value)}
+                  >
+                    <option value="Employee">Employee</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Admin">Admin</option>
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <h2>Send Training Invite</h2>
+        <label>
+          Training:
+          <select
+            value={selectedTraining}
+            onChange={(e) => setSelectedTraining(e.target.value)}
+          >
+            <option value="">--Select Training--</option>
+            {trainingOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Invite Expiry Time:
+          <input
+            type="datetime-local"
+            value={inviteExpiryTime}
+            onChange={(e) => setInviteExpiryTime(e.target.value)}
+          />
+        </label>
+        <label>
+          Select Users:
+          <select
+            multiple
+            value={selectedUsers.map((user) => user.id)}
+            onChange={(e) =>
+              setSelectedUsers(
+                Array.from(e.target.selectedOptions, (option) =>
+                  users.find((user) => user.id === option.value)
+                )
+              )
+            }
+          >
+            {users.map((user) => (
+              <option key={user.id} value={user.id}>
+                {user.name} ({user.email})
+              </option>
+            ))}
+          </select>
+        </label>
+        <button onClick={handleSendTrainingInvite}>Send Invite</button>
+      </div>
+      <div>
+        <h2>Import Users from CSV</h2>
+        <label>
+          Select File:
+          <input type="file" onChange={handleFileInputChange} />
+        </label>
+        <button onClick={handleImportUsersFromCsv}>Import</button>
+      </div>
     </div>
-  );
-};
-export default AdminDashboard;
+    );
+    };
+    
+    export default AdminDashboard;       
