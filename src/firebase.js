@@ -1,6 +1,6 @@
 require('dotenv').config();
 
-// Importeer de functies die je nodig hebt uit de SDK's die je nodig hebt
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
@@ -15,9 +15,9 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { getDatabase } from "firebase/database"; // Als je Firebase Realtime Database gebruikt
+import { getDatabase } from "firebase/database"; // If using Firebase Realtime Database
 
-// Jouw Firebase-configuratie voor de webapplicatie
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
   authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -27,23 +27,23 @@ const firebaseConfig = {
   appId: process.env.REACT_APP_FIREBASE_APP_ID,
 };
 
-// Initialiseer Firebase
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const database = getDatabase(app); // Initialiseer als je Firebase Realtime Database gebruikt
+const database = getDatabase(app); // Initialize if using Firebase Realtime Database
 
-// Functie om een gebruiker aan te maken met e-mail en wachtwoord
+// Function to create a user with email and password
 async function createUser(email, password) {
   try {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    console.log("Gebruiker aangemaakt:", userCredential.user);
+    console.log("User created:", userCredential.user);
   } catch (error) {
-    console.error("Fout bij het maken van gebruiker:", error);
+    console.error("Error creating user:", error);
   }
 }
 
-// Functie om een document toe te voegen aan de "users"-collectie
+// Function to add a document to "users" collection
 async function addUserDoc(uid, name, email, role) {
   try {
     await addDoc(collection(db, "users"), {
@@ -52,69 +52,83 @@ async function addUserDoc(uid, name, email, role) {
       email,
       role,
     });
-    console.log("Document toegevoegd aan gebruikerscollectie");
+    console.log("Document added to users collection");
   } catch (error) {
-    console.error("Fout bij het toevoegen van document:", error);
+    console.error("Error adding document:", error);
   }
 }
 
-// Functie om een gebruikersdocument bij te werken
+// Function to update a user document
 async function updateUserDoc(docId, updatedData) {
   try {
     const docRef = doc(db, "users", docId);
     await updateDoc(docRef, updatedData);
-    console.log("Document bijgewerkt");
+    console.log("Document updated");
   } catch (error) {
-    console.error("Fout bij het bijwerken van document:", error);
+    console.error("Error updating document:", error);
   }
 }
 
-// Functie om een gebruikersdocument te verwijderen
+// Function to delete a user document
 async function deleteUserDoc(docId) {
   try {
     const docRef = doc(db, "users", docId);
     await deleteDoc(docRef);
-    console.log("Document verwijderd");
+    console.log("Document deleted");
   } catch (error) {
-    console.error("Fout bij het verwijderen van document:", error);
+    console.error("Error deleting document:", error);
   }
 }
 
-// Functie om alle documenten uit de "users"-collectie te krijgen
+// Function to get all documents from "users" collection
 async function getAllUsers() {
   try {
     const querySnapshot = await getDocs(collection(db, "users"));
+    const users = [];
     querySnapshot.forEach((doc) => {
-      console.log(`${doc.id} => ${JSON.stringify(doc.data())}`);
+      users.push({ id: doc.id, ...doc.data() });
     });
+    return users;
   } catch (error) {
-    console.error("Fout bij het ophalen van documenten:", error);
+    console.error("Error getting documents:", error);
+    return [];
   }
 }
 
-// Placeholder functie voor het verzenden van uitnodigingen voor trainingen
+// Function to update a user role
+async function updateUserRole(userId, newRole) {
+  try {
+    const userDoc = doc(db, "users", userId);
+    await updateDoc(userDoc, { role: newRole });
+    console.log("User role updated");
+  } catch (error) {
+    console.error("Error updating user role:", error);
+  }
+}
+
+// Placeholder function for sending training invites
 async function sendTrainingInvite(userIds, trainingId) {
-  console.log(`Sturen van traininguitnodigingen naar gebruikers: ${userIds} voor training: ${trainingId}`);
-  // Implementeer hier je logica
+  console.log(`Sending training invites to users: ${userIds} for training: ${trainingId}`);
+  // Implement your logic here
 }
 
-// Placeholder functie voor het importeren van gebruikers uit CSV
+// Placeholder function for importing users from CSV
 async function importUsersFromCsv(file) {
-  console.log(`Importeren van gebruikers uit CSV: ${file.name}`);
-  // Implementeer hier je logica
+  console.log(`Importing users from CSV: ${file.name}`);
+  // Implement your logic here
 }
 
-// Placeholder functie voor het ophalen van trainingen
+// Placeholder function for getting trainings
 async function getTrainings() {
-  console.log("Ophalen van alle trainingen...");
-  // Implementeer hier je logica
+  console.log("Fetching all trainings...");
+  // Implement your logic here
 }
 
-// Exporteren van functionaliteiten
+// Exporting functionalities
 export {
   auth,
   db,
-  database, // Exporteren als je van plan bent Firebase Realtime Database te gebruiken
+  database, // Export if you plan to use Firebase Realtime Database
   createUser,
   addUserDoc,
   updateUserDoc,
@@ -123,4 +137,6 @@ export {
   sendTrainingInvite,
   importUsersFromCsv,
   getTrainings,
+  getUsers, // Add getUsers to exports
+  updateUserRole, // Add updateUserRole to exports
 };
