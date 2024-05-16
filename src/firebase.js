@@ -1,287 +1,124 @@
-import firebase from "firebase/compat/app";
-import "firebase/compat/auth";
-import "firebase/compat/database";
+// Importeer de functies die je nodig hebt uit de SDK's die je nodig hebt
 import { initializeApp } from "firebase/app";
 import {
-  GoogleAuthProvider,
   getAuth,
-  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signOut,
 } from "firebase/auth";
 import {
   getFirestore,
   collection,
+  getDocs,
   addDoc,
-  doc,
   updateDoc,
   deleteDoc,
-  getDocs,
-  query,
-  orderBy,
-  limit,
-  where,
+  doc,
 } from "firebase/firestore";
-import { getDatabase, ref, set } from "firebase/database";
-import { getFunctions } from "firebase/functions";
+import { getDatabase } from "firebase/database"; // Als je Firebase Realtime Database gebruikt
 
+// Je web-app Firebase configuratie
 const firebaseConfig = {
-  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
-  authDomain: process.env.REACT_APP_AUTH_DOMAIN,
-  databaseURL: process.env.REACT_APP_DATABASE_URL,
-  projectId: process.env.REACT_APP_PROJECT_ID,
-  storageBucket: process.env.REACT_APP_STORAGE_BUCKET,
-  messagingSenderId: process.env.REACT_APP_MESSAGING_SENDER_ID,
-  appId: process.env.REACT_APP_APP_ID,
-  measurementId: process.env.REACT_APP_MEASUREMENT_ID,
+  apiKey: "API_KEY",
+  authDomain: "PROJECT_ID.firebaseapp.com",
+  projectId: "PROJECT_ID",
+  storageBucket: "PROJECT_ID.appspot.com",
+  messagingSenderId: "SENDER_ID",
+  appId: "APP_ID",
 };
 
+// Initialiseer Firebase
 const app = initializeApp(firebaseConfig);
-
 const auth = getAuth(app);
 const db = getFirestore(app);
-const database = getDatabase(app);
-const functions = getFunctions(app);
-const googleProvider = new GoogleAuthProvider();
+const database = getDatabase(app); // Initialiseren als je Firebase Realtime Database gebruikt
 
-
-// Admin
-
-// Admin Login page
-
-// Users
-
-const createUser = async (name, email, role) => {
+// Functie om een gebruiker aan te maken met e-mail en wachtwoord
+async function createUser(email, password) {
   try {
-    const res = await createUserWithEmailAndPassword(auth, email, 'password');
-    const user = res.user;
-    await addDoc(collection(db, "users"), {
-      uid: user.uid,
-      name,
-      role,
-      authProvider: "local",
-      email,
-    });
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-};
-
-const updateUserRole = async (userId, role) => {
-  try {
-    const userRef = doc(db, 'users', userId);
-    await updateDoc(userRef, { role });
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-};
-
-const deleteUser = async (userId) => {
-  try {
-    const userRef = doc(db, 'users', userId);
-    await deleteDoc(userRef);
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-};
-
-const sendTrainingInvite = async (userIds, trainingId) => {
-  try {
-    const trainingRef = doc(db, 'trainings', trainingId);
-    const trainingSnapshot = await getDocs(trainingRef);
-
-    if (!trainingSnapshot.exists()) {
-      throw new Error(`Training with ID ${trainingId} does not exist`);
-    }
-
-    const trainingData = trainingSnapshot.data();
-    const validUntil = Date.now() + (trainingData.validityPeriodSeconds * 1000);
-
-    for (const userId of userIds) {
-      const userRef = doc(db, 'users', userId);
-      const userSnapshot = await getDocs(userRef);
-
-      if (!userSnapshot.exists()) {
-        throw new Error(`User with ID ${userId} does not exist`);
-      }
-
-      const userData = userSnapshot.data();
-
-      const inviteRef = await addDoc(collection(db, 'invites'), {
-        userId,
-        trainingId,
-        validUntil,
-      });
-
-      // Send email invite to user
-      // ...
-
-      console.log(`Invite with ID ${inviteRef.id} sent to ${userData.email}`);
-    }
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-};
-
-// Trainings
-
-const createTraining = async (name, questions) => {
-  try {
-    const trainingRef = await addDoc(collection(db, "trainings"), {
-      name,
-      questions,
-      validityPeriodSeconds: 604800, // 7 days
-    });
-    console.log(`Training ${name} created with ID ${trainingRef.id}`);
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-};
-
-const updateTraining = async (trainingId, name, questions) => {
-  try {
-    const trainingRef = doc(db, "trainings", trainingId);
-    await updateDoc(trainingRef, {
-      name,
-      questions,
-    });
-    console.log(`Training ${name} updated with ID ${trainingRef.id}`);
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-};
-
-const deleteTraining = async (trainingId) => {
-  try {
-    const trainingRef = doc(db, "trainings", trainingId);
-    await deleteDoc(trainingRef);
-    console.log(`Training with ID ${trainingRef.id} deleted`);
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-};
-
-const getTrainings = async () => {
-  try {
-    const querySnapshot = await getDocs(collection(db, "trainings"));
-    const trainings = [];
-    querySnapshot.forEach((doc) => {
-      const data = doc.data();
-      trainings.push({
-        id: doc.id,
-        name: data.name,
-        questions: data.questions,
-        validityPeriodSeconds: data.validityPeriodSeconds,
-      });
-    });
-    return trainings;
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-};
-
-const getTrainingById = async (trainingId) => {
-  try {
-    const trainingRef = doc(db, "trainings", trainingId);
-    const trainingSnapshot = await getDoc(trainingRef);
-    if (!trainingSnapshot.exists()) {
-      throw new Error(`Training with ID ${trainingId} does not exist`);
-    }
-    const trainingData = trainingSnapshot.data();
-    return {
-      id: trainingSnapshot.id,
-      name: trainingData.name,
-      questions: trainingData.questions,
-      validityPeriodSeconds: trainingData.validityPeriodSeconds,
-    };
-  } catch (err) {
-    console.error(err);
-    alert(err.message);
-  }
-};
-
-const logout = async () => {
-  try {
-    await auth.signOut();
-    console.log('Logged out successfully');
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    console.log("Gebruiker aangemaakt:", userCredential.user);
   } catch (error) {
-    console.error('Error logging out:', error);
+    console.error("Fout bij het aanmaken van gebruiker:", error);
   }
 }
-export const getUsers = async () => {
-  const snapshot = await db.collection('users').get();
-  const users = snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  }));
-  return users;
-};
 
-const importUsersFromCsv = async (file) => {
+// Functie om een document toe te voegen aan de "users" collectie
+async function addUserDoc(uid, name, email, role) {
   try {
-    const fileReader = new FileReader();
-    fileReader.readAsText(file);
-
-    fileReader.onload = async (e) => {
-      const users = [];
-      const rows = e.target.result.split("\n");
-      for (let i = 1; i < rows.length; i++) {
-        const cells = rows[i].split(",");
-        const name = cells[0].trim();
-        const email = cells[1].trim();
-        const role = cells[2].trim();
-        users.push({ name, email, role });
-      }
-      await Promise.all(
-        users.map(async ({ name, email, role }) => {
-          const existingUser = await db
-            .collection("users")
-            .where("email", "==", email)
-            .get();
-          if (existingUser.docs.length > 0) {
-            return;
-          }
-          await db.collection("users").add({
-            name,
-            email,
-            role,
-          });
-        })
-      );
-    };
+    await addDoc(collection(db, "users"), {
+      uid,
+      name,
+      email,
+      role,
+    });
+    console.log("Document toegevoegd aan gebruikerscollectie");
   } catch (error) {
-    console.error(error);
+    console.error("Fout bij toevoegen van document:", error);
   }
-};
+}
 
+// Functie om een gebruikersdocument bij te werken
+async function updateUserDoc(docId, updatedData) {
+  try {
+    const docRef = doc(db, "users", docId);
+    await updateDoc(docRef, updatedData);
+    console.log("Document bijgewerkt");
+  } catch (error) {
+    console.error("Fout bij bijwerken van document:", error);
+  }
+}
 
+// Functie om een gebruikersdocument te verwijderen
+async function deleteUserDoc(docId) {
+  try {
+    const docRef = doc(db, "users", docId);
+    await deleteDoc(docRef);
+    console.log("Document verwijderd");
+  } catch (error) {
+    console.error("Fout bij verwijderen van document:", error);
+  }
+}
+
+// Functie om alle documenten uit de "users" collectie op te halen
+async function getAllUsers() {
+  try {
+    const querySnapshot = await getDocs(collection(db, "users"));
+    querySnapshot.forEach((doc) => {
+      console.log(`${doc.id} => ${JSON.stringify(doc.data())}`);
+    });
+  } catch (error) {
+    console.error("Fout bij ophalen van documenten:", error);
+  }
+}
+
+// Placeholder functie voor het verzenden van trainingsuitnodigingen
+async function sendTrainingInvite(userIds, trainingId) {
+  console.log(`Trainingsuitnodigingen verzenden naar gebruikers: ${userIds} voor training: ${trainingId}`);
+  // Implementeer hier je logica
+}
+
+// Placeholder functie voor het importeren van gebruikers uit CSV
+async function importUsersFromCsv(file) {
+  console.log(`Gebruikers importeren uit CSV: ${file.name}`);
+  // Implementeer hier je logica
+}
+
+// Placeholder functie voor het ophalen van trainingen
+async function getTrainings() {
+  console.log("Alle trainingen ophalen...");
+  // Implementeer hier je logica
+}
+
+// Exporteer functionaliteiten
 export {
-  importUsersFromCsv,
   auth,
   db,
-  database,
-  googleProvider,
-  logout,
+  database, // Exporteer als je van plan bent om Firebase Realtime Database te gebruiken
   createUser,
-  updateUserRole,
-  deleteUser,
+  addUserDoc,
+  updateUserDoc,
+  deleteUserDoc,
+  getAllUsers,
   sendTrainingInvite,
-  createTraining,
-  updateTraining,
-  deleteTraining,
+  importUsersFromCsv,
   getTrainings,
-  getTrainingById,
 };
-
-export default firebase;
